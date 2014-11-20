@@ -34,7 +34,7 @@ func init() {
 	flag.StringVar(&lookupd, "lookupd-addr", "nsqlookupd:4161", "nsq lookupd address")
 	flag.StringVar(&topic, "topic", "hooks-docker", "nsq topic")
 	flag.StringVar(&channel, "channel", "binaries", "nsq channel")
-	flag.StringVar(&bucket, "s3bucket", "s3://test.docker.com/master/binaries/", "s3 bucket to push binaries")
+	flag.StringVar(&bucket, "s3bucket", "s3://master.dockerproject.com/", "s3 bucket to push binaries")
 	flag.StringVar(&region, "s3region", "us-east-1", "s3 region where bucket lives")
 	flag.Parse()
 }

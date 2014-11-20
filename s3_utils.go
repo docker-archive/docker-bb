@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/crowdmob/goamz/aws"
@@ -31,6 +32,7 @@ func pushToS3(bundlesPath string) error {
 	bucket := s.Bucket(bucketname)
 
 	//walk the bundles directory
+	var html string
 	walkFn := func(fpath string, info os.FileInfo, err error) error {
 		stat, err := os.Stat(fpath)
 		if err != nil {
@@ -52,11 +54,33 @@ func pushToS3(bundlesPath string) error {
 			log.Warnf("Uploading %s to s3 failed: %v", fpath, err)
 			return err
 		}
+
+		// add to html
+		image := "default"
+		if strings.HasSuffix(relFilePath, ".sha256") || strings.HasSuffix(relFilePath, ".md5") {
+			image = "text"
+		}
+		html += fmt.Sprintf(`<tr>
+		<td valign="top"><a href="%s"><img src="/static/%s.png" alt="[ICO]"/></a></td>
+		<td><a href="%s">%s</a></td>
+		<td>%s</td>
+		<td>%s</td>
+</tr>`, relFilePath, image, relFilePath, relFilePath, humanSize(stat.Size()), stat.ModTime().Format(time.RFC3339))
+
 		return nil
 	}
 
-	err = filepath.Walk(bundlesPath, walkFn)
-	return err
+	// walk the filepath
+	if err := filepath.Walk(bundlesPath, walkFn); err != nil {
+		return err
+	}
+
+	// add html to template
+	if err := createIndexFile(bucket, html); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func uploadFileToS3(bucket *s3.Bucket, fpath, s3path string) error {
@@ -79,7 +103,7 @@ func uploadFileToS3(bucket *s3.Bucket, fpath, s3path string) error {
 
 	// push the file to s3
 	log.Debugf("Pushing %s to s3", s3path)
-	if err := bucket.Put(s3path, contents, mimetype, "", s3.Options{}); err != nil {
+	if err := bucket.Put(s3path, contents, mimetype, "public-read", s3.Options{}); err != nil {
 		return err
 	}
 	log.Infof("Sucessfully pushed %s to s3", s3path)

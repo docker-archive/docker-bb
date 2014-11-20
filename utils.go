@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -10,6 +11,10 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitly/go-nsq"
+)
+
+var (
+	decimapAbbrs = []string{"B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"}
 )
 
 type QueueOpts struct {
@@ -65,4 +70,19 @@ func getBinaryVersion(temp string) (version string, err error) {
 	}
 
 	return strings.TrimSpace(string(file)), nil
+}
+
+// HumanSize returns a human-readable approximation of a size
+// using SI standard (eg. "44kB", "17MB")
+func humanSize(size int64) string {
+	return intToString(float64(size), 1000.0, decimapAbbrs)
+}
+
+func intToString(size, unit float64, _map []string) string {
+	i := 0
+	for size >= unit {
+		size = size / unit
+		i++
+	}
+	return fmt.Sprintf("%.4g %s", size, _map[i])
 }
