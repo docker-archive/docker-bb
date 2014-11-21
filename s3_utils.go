@@ -103,7 +103,7 @@ func uploadFileToS3(bucket *s3.Bucket, fpath, s3path string) error {
 
 	// push the file to s3
 	log.Debugf("Pushing %s to s3", s3path)
-	if err := bucket.Put(s3path, contents, mimetype, "public-read", s3.Options{}); err != nil {
+	if err := bucket.Put(s3path, contents, mimetype, "public-read", s3.Options{CacheControl: "no-cache"}); err != nil {
 		return err
 	}
 	log.Infof("Sucessfully pushed %s to s3", s3path)
