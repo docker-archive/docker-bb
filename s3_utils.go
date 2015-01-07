@@ -76,7 +76,7 @@ func pushToS3(bundlesPath string) error {
 	}
 
 	// add html to template
-	if err := createIndexFile(bucket, html); err != nil {
+	if err := createIndexFile(bucket, bucketpath, html); err != nil {
 		return err
 	}
 

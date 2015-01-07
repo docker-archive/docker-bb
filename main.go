@@ -94,8 +94,19 @@ func (h *Handler) HandleMessage(m *nsq.Message) error {
 		return err
 	}
 
-	// push to s3
 	bundlesPath := path.Join(temp, "bundles", version, "cross")
+
+	// create commit file
+	if err := ioutil.WriteFile(path.Join(bundlesPath, "commit"), []byte(hook.Sha), 0755); err != nil {
+		return err
+	}
+
+	// create version file
+	if err := ioutil.WriteFile(path.Join(bundlesPath, "version"), []byte(version), 0755); err != nil {
+		return err
+	}
+
+	// push to s3
 	if err = pushToS3(bundlesPath); err != nil {
 		log.Warn(err)
 		return err

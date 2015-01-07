@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -37,16 +38,16 @@ const (
 </html>`
 )
 
-func createIndexFile(bucket *s3.Bucket, html string) error {
-	path := "index.html"
+func createIndexFile(bucket *s3.Bucket, bucketpath, html string) error {
+	p := path.Join(bucketpath, "index.html")
 	contents := strings.Replace(index, "{{ . }}", html, -1)
 
 	// push the file to s3
-	log.Debugf("Pushing %s to s3", path)
-	if err := bucket.Put(path, []byte(contents), "text/html", "public-read", s3.Options{CacheControl: "no-cache"}); err != nil {
+	log.Debugf("Pushing %s to s3", p)
+	if err := bucket.Put(p, []byte(contents), "text/html", "public-read", s3.Options{CacheControl: "no-cache"}); err != nil {
 		return err
 	}
-	log.Infof("Sucessfully pushed %s to s3", path)
+	log.Infof("Sucessfully pushed %s to s3", p)
 
 	return nil
 }
