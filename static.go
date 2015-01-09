@@ -19,7 +19,11 @@ const (
 </head>
 <body>
     <h1>Docker Master Binaries</h1>
-    <div class="wrapper">
+	
+	<div class="wrapper">
+		
+		<p>These binaries are built and updated with each commit to the master branch of Docker. Want to use that cool new feature that was just merged? Download your system's binary and check out the master docs at <a href="http://docs.master.dockerproject.com" target="_blank">docs.master.dockerproject.com</a>.</p>
+
         <table>
             <thead>
                 <tr>

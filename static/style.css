@@ -43,7 +43,7 @@ a:hover {
 /*------------------------------------*\
     Demo block
 \*------------------------------------*/
-.block {
+.block, p {
 	font-size:.875em;
 	margin:20px 0;
 	padding:20px;
