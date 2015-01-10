@@ -10,6 +10,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitly/go-nsq"
+	"github.com/drone/go-github/github"
 )
 
 const (
@@ -43,16 +44,16 @@ type Handler struct {
 }
 
 func (h *Handler) HandleMessage(m *nsq.Message) error {
-	hook, err := ParseHook(m.Body)
+	hook, err := github.ParseHook(m.Body)
 	if err != nil {
 		// Errors will most likely occur because not all GH
 		// hooks are the same format
-		// we care about those that are pushing to master
+		// we care about those that are pushes to master
 		log.Debugf("Error parsing hook: %v", err)
 		return nil
 	}
 
-	shortSha := hook.Sha[0:7]
+	shortSha := hook.After[0:7]
 	// checkout the code in a temp dir
 	temp, err := ioutil.TempDir("", fmt.Sprintf("commit-%s", shortSha))
 	if err != nil {
@@ -60,11 +61,11 @@ func (h *Handler) HandleMessage(m *nsq.Message) error {
 	}
 	defer os.RemoveAll(temp)
 
-	if err := checkout(temp, hook.Repo.CloneUrl, hook.Sha); err != nil {
+	if err := checkout(temp, hook.Repo.Url, hook.After); err != nil {
 		log.Warn(err)
 		return err
 	}
-	log.Debugf("Checked out %s for %s", hook.Sha, hook.Repo.CloneUrl)
+	log.Debugf("Checked out %s for %s", hook.After, hook.Repo.Url)
 
 	var (
 		image     = fmt.Sprintf("docker:commit-%s", shortSha)
@@ -85,7 +86,7 @@ func (h *Handler) HandleMessage(m *nsq.Message) error {
 		log.Warn(err)
 		return err
 	}
-	log.Debugf("Successfully built binaries for %s", hook.Sha)
+	log.Debugf("Successfully built binaries for %s", hook.After)
 
 	// read the version
 	version, err := getBinaryVersion(temp)
@@ -97,7 +98,7 @@ func (h *Handler) HandleMessage(m *nsq.Message) error {
 	bundlesPath := path.Join(temp, "bundles", version, "cross")
 
 	// create commit file
-	if err := ioutil.WriteFile(path.Join(bundlesPath, "commit"), []byte(hook.Sha), 0755); err != nil {
+	if err := ioutil.WriteFile(path.Join(bundlesPath, "commit"), []byte(hook.After), 0755); err != nil {
 		return err
 	}
 

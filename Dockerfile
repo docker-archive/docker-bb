@@ -8,9 +8,10 @@ RUN apt-get update && apt-get install -y \
 RUN go get github.com/bitly/go-nsq && \
     go get github.com/Sirupsen/logrus && \
     go get github.com/crowdmob/goamz/aws && \
-    go get github.com/rakyll/magicmime
+    go get github.com/rakyll/magicmime && \
+    go get github.com/drone/go-github/github
 
-ADD . /go/src/github.com/jfrazelle/docker-bb
+COPY . /go/src/github.com/jfrazelle/docker-bb
 RUN cd /go/src/github.com/jfrazelle/docker-bb && go install . ./...
 ENV PATH $PATH:/go/bin
 
