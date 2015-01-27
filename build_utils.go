@@ -43,7 +43,7 @@ func build(temp, name string) error {
 func makeBinary(temp, image, name string, duration time.Duration) error {
 	var (
 		c   = make(chan error)
-		cmd = exec.Command("docker", "run", "-it", "--privileged", "--name", name, "-v", path.Join(temp, "bundles")+":/go/src/github.com/docker/docker/bundles", image, "hack/make.sh", "binary", "cross")
+		cmd = exec.Command("docker", "run", "-i", "--privileged", "--name", name, "-v", path.Join(temp, "bundles")+":/go/src/github.com/docker/docker/bundles", image, "hack/make.sh", "binary", "cross")
 	)
 	cmd.Dir = temp
 
