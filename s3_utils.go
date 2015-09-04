@@ -86,11 +86,11 @@ func pushToS3(bundlesPath string) error {
 func uploadFileToS3(bucket *s3.Bucket, fpath, s3path string) error {
 	// try to get the mime type
 	mimetype := ""
-	mm, err := magicmime.New(magicmime.MAGIC_MIME_TYPE | magicmime.MAGIC_SYMLINK | magicmime.MAGIC_ERROR)
+	err := magicmime.Open(magicmime.MAGIC_MIME_TYPE | magicmime.MAGIC_SYMLINK | magicmime.MAGIC_ERROR)
 	if err != nil {
 		log.Debugf("Magic meme failed for: %v", err)
 	} else {
-		mimetype, err = mm.TypeByFile(fpath)
+		mimetype, err = magicmime.TypeByFile(fpath)
 		if err != nil {
 			log.Debugf("Mime type detection for %s failed: %v", fpath, err)
 		}

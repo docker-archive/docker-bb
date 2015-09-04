@@ -9,7 +9,7 @@ RUN go get github.com/bitly/go-nsq && \
     go get github.com/Sirupsen/logrus && \
     go get github.com/crowdmob/goamz/aws && \
     go get github.com/rakyll/magicmime && \
-    go get github.com/drone/go-github/github
+    go get github.com/crosbymichael/octokat
 
 COPY . /go/src/github.com/jfrazelle/docker-bb
 RUN cd /go/src/github.com/jfrazelle/docker-bb && go install . ./...
