@@ -12,7 +12,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/crowdmob/goamz/aws"
 	"github.com/crowdmob/goamz/s3"
-	"github.com/rakyll/magicmime"
 )
 
 func pushToS3(bundlesPath string) error {
@@ -84,18 +83,6 @@ func pushToS3(bundlesPath string) error {
 }
 
 func uploadFileToS3(bucket *s3.Bucket, fpath, s3path string) error {
-	// try to get the mime type
-	mimetype := ""
-	err := magicmime.Open(magicmime.MAGIC_MIME_TYPE | magicmime.MAGIC_SYMLINK | magicmime.MAGIC_ERROR)
-	if err != nil {
-		log.Debugf("Magic meme failed for: %v", err)
-	} else {
-		mimetype, err = magicmime.TypeByFile(fpath)
-		if err != nil {
-			log.Debugf("Mime type detection for %s failed: %v", fpath, err)
-		}
-	}
-
 	contents, err := ioutil.ReadFile(fpath)
 	if err != nil {
 		log.Warnf("Reading %q failed: %v", fpath, err)
@@ -103,7 +90,7 @@ func uploadFileToS3(bucket *s3.Bucket, fpath, s3path string) error {
 
 	// push the file to s3
 	log.Debugf("Pushing %s to s3", s3path)
-	if err := bucket.Put(s3path, contents, mimetype, "public-read", s3.Options{CacheControl: "no-cache"}); err != nil {
+	if err := bucket.Put(s3path, contents, "", "public-read", s3.Options{CacheControl: "no-cache"}); err != nil {
 		return err
 	}
 	log.Infof("Sucessfully pushed %s to s3", s3path)
