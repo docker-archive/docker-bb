@@ -10,7 +10,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitly/go-nsq"
-	"github.com/crosbymichael/octokat"
+	"github.com/drone/go-github/github"
 )
 
 const (
@@ -44,7 +44,7 @@ type Handler struct {
 }
 
 func (h *Handler) HandleMessage(m *nsq.Message) error {
-	hook, err := octokat.ParseHook(m.Body)
+	hook, err := github.ParseHook(m.Body)
 	if err != nil {
 		// Errors will most likely occur because not all GH
 		// hooks are the same format
@@ -61,11 +61,11 @@ func (h *Handler) HandleMessage(m *nsq.Message) error {
 	}
 	defer os.RemoveAll(temp)
 
-	if err := checkout(temp, hook.Repo.URL, hook.After); err != nil {
+	if err := checkout(temp, hook.Repo.Url, hook.After); err != nil {
 		log.Warn(err)
 		return err
 	}
-	log.Debugf("Checked out %s for %s", hook.After, hook.Repo.URL)
+	log.Debugf("Checked out %s for %s", hook.After, hook.Repo.Url)
 
 	var (
 		image     = fmt.Sprintf("docker:commit-%s", shortSha)
