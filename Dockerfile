@@ -14,7 +14,7 @@ RUN	git config --global user.name docker-bb \
 	&& git config --global user.email dockerbb@dockerproject.com \
 	&& ln -s /.dockerinit /usr/bin/docker
 
-COPY . /go/src/github.com/jfrazelle/docker-bb
+COPY . /go/src/github.com/docker/docker-bb
 
 RUN buildDeps=' \
 		go \
@@ -25,8 +25,8 @@ RUN buildDeps=' \
 	set -x \
 	&& apk update \
 	&& apk add $buildDeps \
-	&& cd /go/src/github.com/jfrazelle/docker-bb \
-	&& go get -d -v github.com/jfrazelle/docker-bb \
+	&& cd /go/src/github.com/docker/docker-bb \
+	&& go get -d -v github.com/docker/docker-bb \
 	&& go build -o /usr/bin/docker-bb . \
 	&& apk del $buildDeps \
 	&& rm -rf /var/cache/apk/* \
