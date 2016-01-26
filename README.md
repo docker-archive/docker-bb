@@ -27,7 +27,7 @@ $ docker run -d --restart always \
     -e DOCKER_HOST="unix:///var/run/docker.sock" \
     --privileged \
     --name binary-builder \
-    jess/docker-bb -d -s3bucket="s3://jesss/test/docker/master/" \
+    dockercore/docker-bb -d -s3bucket="s3://jesss/test/docker/master/" \
     -s3region="us-west-1" \
     -topic hooks-docker -channel binaries \
     -lookupd-addr nsqlookupd:4161
