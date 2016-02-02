@@ -128,6 +128,7 @@ func (h *Handler) HandleMessage(m *nsq.Message) error {
 
 	// add html to template
 	if err := createIndexFile(bucket, bucketpath); err != nil {
+		log.Warn(err)
 		return err
 	}
 
