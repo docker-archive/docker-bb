@@ -2,16 +2,28 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"path"
+	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 )
 
+// get the version for the binaries built
+func getBinaryVersion(temp string) (version string, err error) {
+	file, err := ioutil.ReadFile(path.Join(temp, "VERSION"))
+	if err != nil {
+		return version, err
+	}
+
+	return strings.TrimSpace(string(file)), nil
+}
+
+// checkout `git clones` a repo
 func checkout(temp, repo, sha string) error {
-	// don't clone the whole repo
-	// it's too slow
+	// don't clone the whole repo, it's too slow
 	cmd := exec.Command("git", "clone", "--depth=100", "--recursive", "--branch=master", repo, temp)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -29,6 +41,7 @@ func checkout(temp, repo, sha string) error {
 	return nil
 }
 
+// build the docker image
 func build(temp, name string) error {
 	cmd := exec.Command("docker", "build", "-t", name, ".")
 	cmd.Dir = temp
@@ -40,6 +53,7 @@ func build(temp, name string) error {
 	return nil
 }
 
+// make the binaries
 func makeBinary(temp, image, name string, duration time.Duration) error {
 	var (
 		c   = make(chan error)
@@ -53,20 +67,20 @@ func makeBinary(temp, image, name string, duration time.Duration) error {
 			// it's ok for the make command to return a non-zero exit
 			// incase of a failed build
 			if _, ok := err.(*exec.ExitError); !ok {
-				log.Infof("Build failed: %s", string(output))
+				logrus.Infof("Build failed: %s", string(output))
 			} else {
 				if string(output) != "" {
-					log.Debugf("Container log: %s", string(output))
+					logrus.Debugf("Container log: %s", string(output))
 				}
 				err = nil
 			}
 		} else if string(output) != "" {
-			log.Debugf("Container log: %s", string(output))
+			logrus.Debugf("Container log: %s", string(output))
 		}
 
 		output, err = exec.Command("docker", "wait", name).CombinedOutput()
 		if err != nil {
-			log.Infof("Waiting failed: %s", string(output))
+			logrus.Infof("Waiting failed: %s", string(output))
 		}
 
 		c <- err
@@ -79,17 +93,18 @@ func makeBinary(temp, image, name string, duration time.Duration) error {
 		}
 	case <-time.After(duration):
 		if err := cmd.Process.Kill(); err != nil {
-			log.Infof("Killing process failed: %v", err)
+			logrus.Infof("Killing process failed: %v", err)
 		}
 		return fmt.Errorf("Killed because build took to long")
 	}
 	return nil
 }
 
+// remove the build container
 func removeContainer(container string) {
 	cmd := exec.Command("docker", "rm", "-f", container)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Warnf("Removing container failed: %s, %v", string(output), err)
+		logrus.Warnf("Removing container failed: %s, %v", string(output), err)
 	}
 }

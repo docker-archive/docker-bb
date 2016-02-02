@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/crowdmob/goamz/s3"
 )
 
@@ -35,8 +35,7 @@ func pushToS3(bucket *s3.Bucket, bucketpath, bundlesPath string) error {
 		}
 
 		if err = uploadFileToS3(bucket, fpath, path.Join(bucketpath, relFilePath)); err != nil {
-			log.Warnf("Uploading %s to s3 failed: %v", fpath, err)
-			return err
+			return fmt.Errorf("Uploading %s to s3 failed: %v", fpath, err)
 		}
 
 		return nil
@@ -53,15 +52,15 @@ func pushToS3(bucket *s3.Bucket, bucketpath, bundlesPath string) error {
 func uploadFileToS3(bucket *s3.Bucket, fpath, s3path string) error {
 	contents, err := ioutil.ReadFile(fpath)
 	if err != nil {
-		log.Warnf("Reading %q failed: %v", fpath, err)
+		return fmt.Errorf("Reading %q failed: %v", fpath, err)
 	}
 
 	// push the file to s3
-	log.Debugf("Pushing %s to s3", s3path)
+	logrus.Debugf("Pushing %s to s3", s3path)
 	if err := bucket.Put(s3path, contents, "", "public-read", s3.Options{CacheControl: "no-cache"}); err != nil {
 		return err
 	}
-	log.Infof("Sucessfully pushed %s to s3", s3path)
+	logrus.Infof("Sucessfully pushed %s to s3", s3path)
 	return nil
 }
 

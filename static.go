@@ -8,8 +8,8 @@ import (
 	"strings"
 	"text/template"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/crowdmob/goamz/s3"
+	units "github.com/docker/go-units"
 )
 
 const (
@@ -53,6 +53,7 @@ const (
 </html>`
 )
 
+// create the index.html file
 func createIndexFile(bucket *s3.Bucket, bucketpath string) error {
 	// list all the files
 	files, err := listFiles(bucketpath, bucketpath, "", 2000, bucket)
@@ -80,7 +81,7 @@ func createIndexFile(bucket *s3.Bucket, bucketpath string) error {
 			return strings.Join(parts[1:len(parts)-1], "/")
 		},
 		"size": func(s int64) string {
-			return humanSize(s)
+			return units.HumanSize(float64(s))
 		},
 	}
 
@@ -92,8 +93,7 @@ func createIndexFile(bucket *s3.Bucket, bucketpath string) error {
 
 	// push the file to s3
 	if err = uploadFileToS3(bucket, tmp.Name(), path.Join(bucketpath, "index.html")); err != nil {
-		log.Warnf("Uploading %s to s3 failed: %v", tmp.Name(), err)
-		return err
+		return fmt.Errorf("Uploading %s to s3 failed: %v", tmp.Name(), err)
 	}
 
 	return nil

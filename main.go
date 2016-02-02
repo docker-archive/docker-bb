@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/signal"
 	"path"
+	"syscall"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/bitly/go-nsq"
 	"github.com/crowdmob/goamz/aws"
 	"github.com/crowdmob/goamz/s3"
@@ -42,16 +44,83 @@ func init() {
 	flag.Parse()
 }
 
-type Handler struct {
+func main() {
+	// set log level
+	if debug {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+
+	if version {
+		fmt.Println(VERSION)
+		return
+	}
+
+	bb := &Handler{}
+	if err := ProcessQueue(bb, QueueOptsFromContext(topic, channel, lookupd)); err != nil {
+		logrus.Fatal(err)
+	}
 }
 
+// Handler is the message processing interface for the consumer to nsq.
+type Handler struct{}
+
+// QueueOpts are the options for the nsq queue.
+type QueueOpts struct {
+	LookupdAddr string
+	Topic       string
+	Channel     string
+	Concurrent  int
+	Signals     []os.Signal
+}
+
+// QueueOptsFromContext returns a QueueOpts object from the given settings.
+func QueueOptsFromContext(topic, channel, lookupd string) QueueOpts {
+	return QueueOpts{
+		Signals:     []os.Signal{syscall.SIGTERM, syscall.SIGINT},
+		LookupdAddr: lookupd,
+		Topic:       topic,
+		Channel:     channel,
+		Concurrent:  1,
+	}
+}
+
+// ProcessQueue sets up the handler to process the nsq queue with the given options.
+func ProcessQueue(handler nsq.Handler, opts QueueOpts) error {
+	if opts.Concurrent == 0 {
+		opts.Concurrent = 1
+	}
+	s := make(chan os.Signal, 64)
+	signal.Notify(s, opts.Signals...)
+
+	consumer, err := nsq.NewConsumer(opts.Topic, opts.Channel, nsq.NewConfig())
+	if err != nil {
+		return err
+	}
+	consumer.AddConcurrentHandlers(handler, opts.Concurrent)
+	if err := consumer.ConnectToNSQLookupd(opts.LookupdAddr); err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-consumer.StopChan:
+			return nil
+		case sig := <-s:
+			logrus.WithField("signal", sig).Debug("received signal")
+			consumer.Stop()
+		}
+	}
+}
+
+// HandleMessage reads the nsq message body and parses it as a github webhook,
+// checks out the source for the repository & builds/uploads the binaries.
 func (h *Handler) HandleMessage(m *nsq.Message) error {
 	hook, err := github.ParseHook(m.Body)
 	if err != nil {
 		// Errors will most likely occur because not all GH
 		// hooks are the same format
 		// we care about those that are pushes to master
-		log.Debugf("Error parsing hook: %v", err)
+		logrus.Debugf("Error parsing hook: %v", err)
 		return nil
 	}
 
@@ -64,36 +133,36 @@ func (h *Handler) HandleMessage(m *nsq.Message) error {
 	defer os.RemoveAll(temp)
 
 	if err := checkout(temp, hook.Repo.Url, hook.After); err != nil {
-		log.Warn(err)
+		logrus.Warn(err)
 		return err
 	}
-	log.Debugf("Checked out %s for %s", hook.After, hook.Repo.Url)
+	logrus.Debugf("Checked out %s for %s", hook.After, hook.Repo.Url)
 
 	var (
 		image     = fmt.Sprintf("docker:commit-%s", shortSha)
 		container = fmt.Sprintf("build-%s", shortSha)
 	)
-	log.Infof("image=%s container=%s\n", image, container)
+	logrus.Infof("image=%s container=%s\n", image, container)
 
 	// build the image
 	if err := build(temp, image); err != nil {
-		log.Warn(err)
+		logrus.Warn(err)
 		return err
 	}
-	log.Debugf("Successfully built image %s", image)
+	logrus.Debugf("Successfully built image %s", image)
 
 	// make the binary
 	defer removeContainer(container)
 	if err = makeBinary(temp, image, container, 20*time.Minute); err != nil {
-		log.Warn(err)
+		logrus.Warn(err)
 		return err
 	}
-	log.Debugf("Successfully built binaries for %s", hook.After)
+	logrus.Debugf("Successfully built binaries for %s", hook.After)
 
 	// read the version
 	version, err := getBinaryVersion(temp)
 	if err != nil {
-		log.Warnf("Getting binary version failed: %v", err)
+		logrus.Warnf("Getting binary version failed: %v", err)
 		return err
 	}
 
@@ -122,32 +191,15 @@ func (h *Handler) HandleMessage(m *nsq.Message) error {
 
 	// push to s3
 	if err = pushToS3(bucket, bucketpath, bundlesPath); err != nil {
-		log.Warn(err)
+		logrus.Warn(err)
 		return err
 	}
 
 	// add html to template
 	if err := createIndexFile(bucket, bucketpath); err != nil {
-		log.Warn(err)
+		logrus.Warn(err)
 		return err
 	}
 
 	return nil
-}
-
-func main() {
-	// set log level
-	if debug {
-		log.SetLevel(log.DebugLevel)
-	}
-
-	if version {
-		fmt.Println(VERSION)
-		return
-	}
-
-	bb := &Handler{}
-	if err := ProcessQueue(bb, QueueOptsFromContext(topic, channel, lookupd)); err != nil {
-		log.Fatal(err)
-	}
 }
