@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	// VERSION is the binary version.
 	VERSION = "v0.1.0"
 )
 
