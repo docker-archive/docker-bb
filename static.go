@@ -40,8 +40,8 @@ const (
             <tbody>
 			{{ range $key, $value := . }}
 				<tr>
-					<td valign="top"><a href="{{ $value.Key }}"><img src="/static/{{ $value.Key | ext }}.png" alt="[ICO]"/></a></td>
-					<td><a href="{{ $value.Key }}">{{ $value.Key | base }}</a></td>
+					<td valign="top"><a href="/{{ $value.Key }}"><img src="/static/{{ $value.Key | ext }}.png" alt="[ICO]"/></a></td>
+					<td><a href="/{{ $value.Key }}">{{ $value.Key }}</a></td>
 					<td>{{ $value.Size | size }}</td>
 					<td>{{ $value.LastModified }}</td>
 				</tr>
@@ -76,17 +76,17 @@ func createIndexFile(bucket *s3.Bucket, bucketpath string) error {
 			}
 			return "default"
 		},
-		"base": func(name string) string {
-			parts := strings.Split(name, "/")
-			return strings.Join(parts[1:len(parts)-1], "/")
-		},
 		"size": func(s int64) string {
 			return units.HumanSize(float64(s))
 		},
 	}
 
 	// parse & execute the template
-	tmpl := template.Must(template.New("").Funcs(funcMap).Parse(index))
+	tmpl, err := template.New("").Funcs(funcMap).Parse(index)
+	if err != nil {
+		return fmt.Errorf("Parsing template failed: %v", err)
+	}
+
 	if err := tmpl.Execute(tmp, files); err != nil {
 		return fmt.Errorf("Execute template failed: %v", err)
 	}
