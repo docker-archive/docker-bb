@@ -89,7 +89,13 @@ func listFiles(prefix, delimiter, marker string, maxKeys int, b *s3.Bucket) (fil
 	}
 
 	// append to files
-	files = append(files, resp.Contents...)
+	for _, fl := range resp.Contents {
+		if strings.Contains(fl.Key, "index.html") || strings.Contains(fl.Key, "static") || strings.Contains(fl.Key, "logs") {
+			continue
+		}
+
+		files = append(files, fl)
+	}
 
 	// recursion for the recursion god
 	if resp.IsTruncated && resp.NextMarker != "" {
