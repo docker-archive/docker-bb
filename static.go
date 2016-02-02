@@ -87,7 +87,7 @@ func createIndexFile(bucket *s3.Bucket, bucketpath string) error {
 
 	// parse & execute the template
 	tmpl := template.Must(template.New("").Funcs(funcMap).Parse(index))
-	if err := tmpl.ExecuteTemplate(tmp, "layout", files); err != nil {
+	if err := tmpl.Execute(tmp, files); err != nil {
 		return fmt.Errorf("Execute template failed: %v", err)
 	}
 
