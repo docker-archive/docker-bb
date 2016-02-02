@@ -7,31 +7,16 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/crowdmob/goamz/aws"
 	"github.com/crowdmob/goamz/s3"
 )
 
-func pushToS3(bundlesPath string) error {
+func pushToS3(bucket *s3.Bucket, bucketpath, bundlesPath string) error {
 	if _, err := os.Stat(bundlesPath); os.IsNotExist(err) {
 		return fmt.Errorf("This is awkward, the bundles path DNE: %s", bundlesPath)
 	}
 
-	// use env variables to connect to s3
-	auth, err := aws.EnvAuth()
-	if err != nil {
-		return fmt.Errorf("AWS Auth failed: %v", err)
-	}
-
-	// connect to s3 bucket
-	s := s3.New(auth, aws.GetRegion(region))
-	bucketname, bucketpath := bucketParts(bucket)
-	bucket := s.Bucket(bucketname)
-
-	//walk the bundles directory
-	var html string
 	walkFn := func(fpath string, info os.FileInfo, err error) error {
 		stat, err := os.Stat(fpath)
 		if err != nil {
@@ -54,28 +39,11 @@ func pushToS3(bundlesPath string) error {
 			return err
 		}
 
-		// add to html
-		image := "default"
-		if strings.HasSuffix(relFilePath, ".sha256") || strings.HasSuffix(relFilePath, ".md5") {
-			image = "text"
-		}
-		html += fmt.Sprintf(`<tr>
-		<td valign="top"><a href="%s"><img src="/static/%s.png" alt="[ICO]"/></a></td>
-		<td><a href="%s">%s</a></td>
-		<td>%s</td>
-		<td>%s</td>
-</tr>`, relFilePath, image, relFilePath, relFilePath, humanSize(stat.Size()), stat.ModTime().Format(time.RFC3339))
-
 		return nil
 	}
 
 	// walk the filepath
 	if err := filepath.Walk(bundlesPath, walkFn); err != nil {
-		return err
-	}
-
-	// add html to template
-	if err := createIndexFile(bucket, bucketpath, html); err != nil {
 		return err
 	}
 
@@ -111,4 +79,28 @@ func bucketParts(bucket string) (bucketname, path string) {
 		path = parts[1]
 	}
 	return parts[0], path
+}
+
+// listFiles lists the files in a specific s3 bucket.
+func listFiles(prefix, delimiter, marker string, maxKeys int, b *s3.Bucket) (files []s3.Key, err error) {
+	resp, err := b.List(prefix, delimiter, marker, maxKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	// append to files
+	files = append(files, resp.Contents...)
+
+	// recursion for the recursion god
+	if resp.IsTruncated && resp.NextMarker != "" {
+		f, err := listFiles(resp.Prefix, resp.Delimiter, resp.NextMarker, resp.MaxKeys, b)
+		if err != nil {
+			return nil, err
+		}
+
+		// append to files
+		files = append(files, f...)
+	}
+
+	return files, nil
 }

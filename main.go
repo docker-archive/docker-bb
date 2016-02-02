@@ -10,6 +10,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitly/go-nsq"
+	"github.com/crowdmob/goamz/aws"
+	"github.com/crowdmob/goamz/s3"
 	"github.com/drone/go-github/github"
 )
 
@@ -107,11 +109,28 @@ func (h *Handler) HandleMessage(m *nsq.Message) error {
 		return err
 	}
 
+	// use env variables to connect to s3
+	auth, err := aws.EnvAuth()
+	if err != nil {
+		return fmt.Errorf("AWS Auth failed: %v", err)
+	}
+
+	// connect to s3 bucket
+	s := s3.New(auth, aws.GetRegion(region))
+	bucketname, bucketpath := bucketParts(bucket)
+	bucket := s.Bucket(bucketname)
+
 	// push to s3
-	if err = pushToS3(bundlesPath); err != nil {
+	if err = pushToS3(bucket, bucketpath, bundlesPath); err != nil {
 		log.Warn(err)
 		return err
 	}
+
+	// add html to template
+	if err := createIndexFile(bucket, bucketpath); err != nil {
+		return err
+	}
+
 	return nil
 }
 
