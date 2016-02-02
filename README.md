@@ -1,5 +1,7 @@
 # Docker Binary Builder
 
+ [![Circle CI](https://circleci.com/gh/docker/docker-bb.svg?style=svg)](https://circleci.com/gh/docker/docker-bb)
+
 Docker binary builder, triggered from nsq messages.
 
 ```console
