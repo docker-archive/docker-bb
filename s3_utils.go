@@ -34,7 +34,7 @@ func pushToS3(bucket *s3.Bucket, bucketpath, bundlesPath string) error {
 			return nil
 		}
 
-		if err = uploadFileToS3(bucket, fpath, path.Join(bucketpath, relFilePath)); err != nil {
+		if err = uploadFileToS3(bucket, fpath, path.Join(bucketpath, relFilePath), ""); err != nil {
 			return fmt.Errorf("Uploading %s to s3 failed: %v", fpath, err)
 		}
 
@@ -49,7 +49,7 @@ func pushToS3(bucket *s3.Bucket, bucketpath, bundlesPath string) error {
 	return nil
 }
 
-func uploadFileToS3(bucket *s3.Bucket, fpath, s3path string) error {
+func uploadFileToS3(bucket *s3.Bucket, fpath, s3path, contentType string) error {
 	contents, err := ioutil.ReadFile(fpath)
 	if err != nil {
 		return fmt.Errorf("Reading %q failed: %v", fpath, err)
@@ -57,7 +57,7 @@ func uploadFileToS3(bucket *s3.Bucket, fpath, s3path string) error {
 
 	// push the file to s3
 	logrus.Debugf("Pushing %s to s3", s3path)
-	if err := bucket.Put(s3path, contents, "", "public-read", s3.Options{CacheControl: "no-cache"}); err != nil {
+	if err := bucket.Put(s3path, contents, contentType, "public-read", s3.Options{CacheControl: "no-cache"}); err != nil {
 		return err
 	}
 	logrus.Infof("Sucessfully pushed %s to s3", s3path)

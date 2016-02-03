@@ -92,7 +92,7 @@ func createIndexFile(bucket *s3.Bucket, bucketpath string) error {
 	}
 
 	// push the file to s3
-	if err = uploadFileToS3(bucket, tmp.Name(), path.Join(bucketpath, "index.html")); err != nil {
+	if err = uploadFileToS3(bucket, tmp.Name(), path.Join(bucketpath, "index.html"), "text/html"); err != nil {
 		return fmt.Errorf("Uploading %s to s3 failed: %v", tmp.Name(), err)
 	}
 
