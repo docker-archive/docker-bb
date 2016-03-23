@@ -196,6 +196,14 @@ func (h *Handler) HandleMessage(m *nsq.Message) error {
 		return err
 	}
 
+	// push tars to s3
+	bundlesPath = path.Join(temp, "bundles", version, "tgz")
+
+	if err = pushToS3(bucket, bucketpath, bundlesPath); err != nil {
+		logrus.Warn(err)
+		return err
+	}
+
 	// add html to template
 	if err := createIndexFile(bucket, bucketpath); err != nil {
 		logrus.Warn(err)
